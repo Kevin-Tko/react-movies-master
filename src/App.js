@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { RotatingLines } from "react-loader-spinner";
 import "./index.css";
 import StarRatings from "./StarRatings.js";
@@ -56,11 +56,16 @@ const KEY = "7b003e19";
 // *************************************************************//
 export default function App() {
     const [allMovies, setAllMovies] = useState([]);
-    const [watched, setWatched] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState("");
     const [query, setQuery] = useState("");
     const [selectedMovieID, setSelectMovieID] = useState("");
+
+    // const [watched, setWatched] = useState([]);
+    const [watched, setWatched] = useState(function () {
+        const dataStored = localStorage.getItem("watched");
+        return JSON.parse(dataStored);
+    });
 
     const averageUserRating = average(watched.map((movie) => movie.userRating));
     const averageimdbRating = average(watched.map((movie) => movie.imdbRating));
@@ -80,6 +85,14 @@ export default function App() {
         setWatched((watched) => [...watched, movie]);
         setSelectMovieID("");
     }
+
+    //Storing watched movies in the local storage
+    useEffect(
+        function () {
+            localStorage.setItem("watched", JSON.stringify(watched));
+        },
+        [watched]
+    );
 
     useEffect(
         function () {
@@ -199,9 +212,26 @@ function Nav({ children }) {
 
 ///////////--Serch bar component--////////////
 function Search({ query, setQuery }) {
+    const inputRef = useRef(null);
+
+    //Using ref to add a focus funtionality to our search bar - DOM manipulation
+    useEffect(
+        function () {
+            function callBack(e) {
+                if (document.activeElement === inputRef.current) return;
+                if (e.code === "Enter") inputRef.current.focus();
+                setQuery("");
+            }
+            document.addEventListener("keydown", callBack);
+            return () => document.removeEventListener("keydown", callBack);
+        },
+        [setQuery]
+    );
+
     return (
         <div>
             <input
+                ref={inputRef}
                 value={query}
                 type="text"
                 placeholder="Search movie by name..."
@@ -389,6 +419,7 @@ function MoviesWatched({ movie, setWatched, watched }) {
 
         setWatched(newWatchlist);
     }
+
     return (
         <li className="movie-item movie-watched">
             <img
